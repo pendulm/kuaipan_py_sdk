@@ -6,13 +6,13 @@ from utils import generate_signature, quote, random_string,\
         timestamp, to_string, get_request_url, safe_value
 V = '1'
 KUAIPAN_API_URL_ROOT = 'openapi.kuaipan.cn/'
-REQUEST_TOKEN_BASE_URL = 'https://' + KUAIPAN_API_URL_ROOT + 'open/requestToken'
-ACCESS_TOKEN_BASE_URL = 'https://' + KUAIPAN_API_URL_ROOT + 'open/accessToken'
+REQUEST_TOKEN_BASE_URL = 'https://openapi.kuaipan.cn/open/requestToken'
+ACCESS_TOKEN_BASE_URL = 'https://openapi.kuaipan.cn/open/accessToken'
 AUTHORIZE_URL = 'https://www.kuaipan.cn/api.php?ac=open&op=authorise&oauth_token=%s'
-ACCOUNT_INFO_BASE_URL = 'http://' + KUAIPAN_API_URL_ROOT + V + '/account_info'
-METADATA_BASE_URL = 'http://' + KUAIPAN_API_URL_ROOT + V + '/metadata/%s/%s'
-SHARE_BASE_URL = 'http://' + KUAIPAN_API_URL_ROOT + V + '/shares/%s/%s'
-FILEOPS_BASE_URL = 'http://' + KUAIPAN_API_URL_ROOT + V + '/fileops/'
+ACCOUNT_INFO_BASE_URL = 'http://openapi.kuaipan.cn/1/account_info'
+METADATA_BASE_URL = 'http://openapi.kuaipan.cn/1/metadata/%s/%s'
+SHARE_BASE_URL = 'http://openapi.kuaipan.cn/1/shares/%s/%s'
+FILEOPS_BASE_URL = 'http://openapi.kuaipan.cn/1/fileops/'
 FILEOPS_CREATE_BASE_URL = FILEOPS_BASE_URL + 'create_folder'
 FILEOPS_DELETE_BASE_URL = FILEOPS_BASE_URL + 'delete'
 FILEOPS_MOVE_BASE_URL = FILEOPS_BASE_URL + 'move'
@@ -35,7 +35,7 @@ class OpenAPIArgumentError(OpenAPIError):
     pass
 
 
-class OpenAPIOauth(object):
+class kpOpenAPI(object):
 
     VERSION = "1.0"
     SIG_METHOD = "HMAC-SHA1"
@@ -49,10 +49,8 @@ class OpenAPIOauth(object):
         if callback:
             parameters['oauth_callback'] =  callback
         base_url = REQUEST_TOKEN_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key(has_token=False))
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -75,10 +73,8 @@ class OpenAPIOauth(object):
     def accessToken(self):
         parameters = self._oauth_parameter()
         base_url = ACCESS_TOKEN_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -98,10 +94,8 @@ class OpenAPIOauth(object):
     def account_info(self):
         parameters = self._oauth_parameter()
         base_url = ACCOUNT_INFO_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -140,10 +134,7 @@ class OpenAPIOauth(object):
 
         base_url = METADATA_BASE_URL % (root, path)
 
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
-
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -154,7 +145,7 @@ class OpenAPIOauth(object):
             raise OpenAPIHTTPError(status, rf.read())
 
 
-    def shares(self, root='app_folder', path=''):
+    def shares(self, path, root='app_folder'):
         parameters = self._oauth_parameter()
 
         if root not in ('app_folder', 'kuaipan'):
@@ -163,10 +154,7 @@ class OpenAPIOauth(object):
 
         base_url = SHARE_BASE_URL % (root, path)
 
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
-
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -176,7 +164,7 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_create_folder(self, path, root='app_folder'):
+    def create_folder(self, path, root='app_folder'):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(path) not in (str, unicode) or not path :
@@ -187,10 +175,8 @@ class OpenAPIOauth(object):
         parameters['path'] = to_string(path)
 
         base_url = FILEOPS_CREATE_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -200,7 +186,7 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_delete(self, root, path, to_recycle=True):
+    def delete(self, path, root='app_folder', to_recycle=True):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(path) not in (str, unicode) or not path:
@@ -213,10 +199,8 @@ class OpenAPIOauth(object):
             parameters['to_recycle'] = False
 
         base_url = FILEOPS_DELETE_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -225,7 +209,7 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_move(self, root, from_path, to_path):
+    def move(self, from_path, to_path, root='app_folder'):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(from_path) not in (str, unicode) or not from_path:
@@ -239,10 +223,8 @@ class OpenAPIOauth(object):
         parameters['to_path'] = to_string(to_path)
 
         base_url = FILEOPS_MOVE_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -251,7 +233,7 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_copy(self, root, from_path, to_path):
+    def copy(self, from_path, to_path, root='app_folder'):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(from_path) not in (str, unicode) or not from_path:
@@ -265,10 +247,8 @@ class OpenAPIOauth(object):
         parameters['to_path'] = to_string(to_path)
 
         base_url = FILEOPS_COPY_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -278,16 +258,14 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_upload_locate(self, source_ip=None):
+    def upload_locate(self, source_ip=None):
         parameters = self._oauth_parameter()
         if source_ip:
             parameters['source_ip'] = source_ip
 
         base_url = FILEOPS_UPLOAD_LOCATE_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
 
         rf = urllib.urlopen(s)
         status = rf.getcode()
@@ -297,7 +275,7 @@ class OpenAPIOauth(object):
         else:
             raise OpenAPIHTTPError(status, rf.read())
 
-    def fileops_upload_file(self, path, overwrite=True, root='app_folder'):
+    def upload_file(self, path, overwrite=True, root='app_folder'):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(path) not in (str, unicode) or not path:
@@ -306,17 +284,14 @@ class OpenAPIOauth(object):
         parameters = self._oauth_parameter()
         parameters['overwrite'] = overwrite
         parameters['root'] = root
-        # parameters['path'] = to_string(path)
-        parameters['path'] = path
+        parameters['path'] = to_string(path)
 
-        base_url = self.fileops_upload_locate() + '/1/fileops/upload_file'
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key(),'post')
+        base_url = self.upload_locate() + '/1/fileops/upload_file'
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters, 'post')
         return s
 
-    def fileops_download_file(self, path, root='app_folder', rev=''):
+    def download_file(self, path, root='app_folder', rev=''):
         if root not in ('app_folder', 'kuaipan'):
             root = 'app_folder'
         if type(path) not in (str, unicode) or not path:
@@ -327,10 +302,8 @@ class OpenAPIOauth(object):
         parameters['path'] = path
 
         base_url = FILEOPS_DOWNLOAD_BASE_URL
-        oauth_signature = generate_signature(base_url,
-                parameters, self._secret_key())
 
-        s = get_request_url(base_url, parameters, oauth_signature)
+        s = self._sig_request_url(base_url, parameters)
         return s
 
     def _oauth_parameter(self, has_token=True):
@@ -350,3 +323,9 @@ class OpenAPIOauth(object):
         if has_token:
             s += self.oauth_token_secret
         return s
+
+    def _sig_request_url(self, base, p, method='get'):
+        has_token = True if p.has_key('oauth_token') else False
+        oauth_signature = generate_signature(base,
+                p, self._secret_key(has_token=has_token), method)
+        return get_request_url(base, p, oauth_signature)
