@@ -9,9 +9,9 @@ username = '' # your login username
 userpwd = ''  # your login password
 consumer_key = '' # your consumer_key
 consumer_secret = '' # your consumer_secret
+app_name = '' # your app name don't prefix u
 
 root = "app_folder"
-app_name = '同步vimwiki'
 path = u'测试文件1'
 from_path = path
 to_path = u'测试文件2'
